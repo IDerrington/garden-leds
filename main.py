@@ -58,11 +58,34 @@ def wheel(pos):
 
     return (r, g, b) if ORDER in (neopixel.RGB, neopixel.GRB) else (r, g, b, 0)
 
+def effect_chasing_dots(lpixels, 
+                        colors=[(255, 0, 0, 0), (0, 255, 0,0 ), (0, 0, 255, 0)], 
+                        spacing=10, 
+                        speed=0.01):
+    """
+    Chasing dots effect"""
+    num_colors = len(colors)
+    pos = 0
+
+    for i in range(100):
+        lpixels.fill(0)  # Clear all LEDs
+
+        for i in range(0, len(lpixels), spacing):
+            color_index = (i // spacing + pos) % num_colors
+            index = (i + pos) % len(lpixels)
+            lpixels[index] = colors[color_index]
+
+        lpixels.show()
+        pos = (pos + 1) % spacing
+        time.sleep(speed)
+
+
 def move_band( lpixels, 
                bandsize : int = 20, 
                dir = 1,
                foreground_colour = (0, 255 , 0, 0 ),
-               background_colour = (255, 0, 0, 0)
+               background_colour = (255, 0, 0, 0),
+               speed = 4
               ):
     """
     Move a band through the LED strip
@@ -90,7 +113,8 @@ def move_band( lpixels,
             pixels[num_pixels - 1 - position] = background_colour
             pixels[num_pixels - bandsize - position -1 ] = foreground_colour
         
-        pixels.show()
+        if position % speed == 0:
+            pixels.show()
 
 def rainbow_cycle(wait):
     """
@@ -117,7 +141,7 @@ def random_burst(lpixels, idelay, rnge = 100): #   { //-RANDOM INDEX/COLOR
         time.sleep(idelay)
         lpixels[idex] = (0, 0, 0, 0)
     
-def effect_breathing(lpixels, color=(0, 0, 255, 0), speed=0.02, repeat = 2):
+def effect_breathing(lpixels, color=(0, 0, 255, 0), speed=0.02, repeat = 1):
     """
     """
     # create brightness array
@@ -131,6 +155,47 @@ def effect_breathing(lpixels, color=(0, 0, 255, 0), speed=0.02, repeat = 2):
         lpixels.fill(scaled_color)
         lpixels.show() 
         time.sleep(speed)
+
+def effect_comet(lpixels,
+                 color=(255, 100, 0), 
+                 tail_length=20, 
+                 speed=4, 
+                 reverse=False
+                 ):
+    """
+    Comet effect with a tail of fading color
+    Currently too slow
+    """
+    num_leds = len(lpixels)
+    pos = num_leds - 1 if reverse else 0
+    direction = -1 if reverse else 1
+
+    # Store previous tail to clear
+    previous_indices = []
+
+    for _ in range(num_leds):
+        # Clear only previous tail
+        for i in previous_indices:
+            lpixels[i] = (0, 0, 0)
+
+        # Draw new tail
+        new_indices = []
+        for i in range(tail_length):
+            index = (pos - i * direction) % num_leds
+            fade = 1 - i / tail_length
+            lpixels[index] = (
+                int(color[0] * fade),
+                int(color[1] * fade),
+                int(color[2] * fade)
+            )
+            new_indices.append(index)
+
+        previous_indices = new_indices
+        if _ % speed == 0:
+            lpixels.show()
+        pos = (pos + direction) % num_leds
+
+
 
 def HSVtoRGB(hue: int, sat: int, val: int):
     """
@@ -213,13 +278,19 @@ def main():
             pixels.show()
             time.sleep(0.5)
 
-            effect_breathing(pixels, color=(255,0,0,0))
-            effect_breathing(pixels, color=(0,255,0,0))
-            effect_breathing(pixels, color=(0,0,255,0))
-            effect_breathing(pixels, color=(0,0,0,255))
+            effect_comet(pixels, color=(255, 0, 0, 0), tail_length=40, speed=4)
+            effect_comet(pixels, color=(0, 255, 0, 0), tail_length=40, speed=4, 
+                         reverse=True)
 
-            move_band(pixels, bandsize=20, dir=1) 
-            move_band(bandsize=10, dir =-1)
+            effect_chasing_dots(pixels)
+
+            effect_breathing(pixels, color=(255,0,0,0))
+            #effect_breathing(pixels, color=(0,255,0,0))
+            #effect_breathing(pixels, color=(0,0,255,0))
+            #effect_breathing(pixels, color=(0,0,0,255))
+
+            move_band(pixels, bandsize=30, dir=1, speed=5) 
+            move_band(pixels, bandsize=30, dir =-1, speed=5)
   
             pixels.fill((0,0,0,0))
             pixels.show()
