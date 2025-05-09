@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 # Simple test for NeoPixels on Raspberry Pi
+import math
 import random
 import time
 import board
 import neopixel
 import logging
+import numpy as np
 
 log = logging.getLogger(__name__)
 
@@ -16,10 +18,10 @@ log = logging.getLogger(__name__)
 pixel_pin_right = board.D18
 
 col = {
-        "RED"  :(100, 0 , 0, 0),
-        "GREEN":(0, 100, 0, 0),
-        "BLUE" :(0, 0, 100, 0),
-        "WHITE":(0 ,0, 0,100)
+        "RED"  :(100, 0 ,  0,   0),
+        "GREEN":(0,   100, 0,   0),
+        "BLUE" :(0,   0,   100, 0),
+        "WHITE":(0,   0,   0,   100)
       }
 
 # The number of NeoPixels
@@ -30,7 +32,7 @@ num_pixels = 600
 ORDER = neopixel.GRBW
 
 pixels = neopixel.NeoPixel(
-    pixel_pin_right, num_pixels, brightness=0.2, auto_write=False, pixel_order=ORDER, 
+    pixel_pin_right, num_pixels, brightness=0.5, auto_write=False, pixel_order=ORDER, 
 )
 
 
@@ -53,35 +55,46 @@ def wheel(pos):
         r = 0
         g = int(pos * 3)
         b = int(255 - pos * 3)
+
     return (r, g, b) if ORDER in (neopixel.RGB, neopixel.GRB) else (r, g, b, 0)
 
-def move_band(bandsize : int = 10, dir = 1):
+def move_band( lpixels, 
+               bandsize : int = 20, 
+               dir = 1,
+               foreground_colour = (0, 255 , 0, 0 ),
+               background_colour = (255, 0, 0, 0)
+              ):
     """
     Move a band through the LED strip
+    This is very slow!!
     """
     
-    # Create the band
+    lpixels.fill(background_colour)
+    lpixels.show()
 
+    # Create the band
     for idx in range(bandsize):
         if dir > 0:
-            pixels[idx] = (128, 40, 10, 0)
+            lpixels[idx] = foreground_colour
         if dir < 0:
-            pixels [num_pixels - 1 - idx] = (128, 40, 10, 0)
+            lpixels [num_pixels - 1 - idx] = foreground_colour
 
-    pixels.show()
+    lpixels.show()
     
     # Move the band
     for position in range(num_pixels - bandsize -1):
         if dir > 0:
-            pixels[position] = 0
-            pixels[bandsize + position] = (128, 40, 10, 0)
+            pixels[position] = background_colour
+            pixels[bandsize + position] = foreground_colour
         if dir < 0:
-            pixels[num_pixels - 1 - position] = 0
-            pixels[num_pixels - bandsize - position -1 ] = (128, 40, 10, 0)
+            pixels[num_pixels - 1 - position] = background_colour
+            pixels[num_pixels - bandsize - position -1 ] = foreground_colour
         
         pixels.show()
 
 def rainbow_cycle(wait):
+    """
+    """
     for j in range(255):
         for i in range(num_pixels):
             pixel_index = (i * 256 // num_pixels) + j
@@ -89,11 +102,11 @@ def rainbow_cycle(wait):
         pixels.show()
         time.sleep(wait)
 
-def random_burst(lpixels, idelay): #   { //-RANDOM INDEX/COLOR
+def random_burst(lpixels, idelay, rnge = 100): #   { //-RANDOM INDEX/COLOR
     """
     Randomly light an LED a random colour
     """
-    for idx in range(512):
+    for idx in range(rnge):
         idex = random.randint(0, num_pixels - 1)
         ihue = random.randint(0, 359)
 
@@ -104,6 +117,20 @@ def random_burst(lpixels, idelay): #   { //-RANDOM INDEX/COLOR
         time.sleep(idelay)
         lpixels[idex] = (0, 0, 0, 0)
     
+def effect_breathing(lpixels, color=(0, 0, 255, 0), speed=0.02, repeat = 2):
+    """
+    """
+    # create brightness array
+    t = np.arange(0, repeat, speed)
+
+    # Sine wave brightness: 0.0 -> 1.0 -> 0.0
+    brightness = (np.sin(2 * np.pi * t + (np.pi*1.5) ) + 1) / 5  # Normalize to 0–1
+    
+    for scl in brightness:
+        scaled_color = tuple(int(scl * c) for c in color)
+        lpixels.fill(scaled_color)
+        lpixels.show() 
+        time.sleep(speed)
 
 def HSVtoRGB(hue: int, sat: int, val: int):
     """
@@ -158,34 +185,40 @@ def HSVtoRGB(hue: int, sat: int, val: int):
     return colors
 
 
+
 def main():
     try:
         while True:
             log.info("Red")
             pixels.fill( col["RED"] )
             pixels.show()
-            time.sleep(1)
+            time.sleep(0.5)
 
             log.info("Green")
             pixels.fill((0, 100, 0, 0))
             pixels.show()
-            time.sleep(1)
+            time.sleep(0.5)
 
             log.info("Blue")
             pixels.fill((0, 0, 100, 0))
             pixels.show()
-            time.sleep(1)
+            time.sleep(0.5)
 
             log.info("White")
             pixels.fill((0, 0, 0, 100))
             pixels.show()
-            time.sleep(1)
+            time.sleep(0.5)
 
             pixels.fill((0,0,0,0))
             pixels.show()
-            time.sleep(1)
+            time.sleep(0.5)
 
-            move_band(bandsize=10, dir =1) 
+            effect_breathing(pixels, color=(255,0,0,0))
+            effect_breathing(pixels, color=(0,255,0,0))
+            effect_breathing(pixels, color=(0,0,255,0))
+            effect_breathing(pixels, color=(0,0,0,255))
+
+            move_band(pixels, bandsize=20, dir=1) 
             move_band(bandsize=10, dir =-1)
   
             pixels.fill((0,0,0,0))
