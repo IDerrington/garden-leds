@@ -16,12 +16,38 @@ log = logging.getLogger(__name__)
 # Choose an open pin connected to the Data In of the NeoPixel strip, i.e. board.D18
 # NeoPixels must be connected to D10, D12, D18 or D21 to work.
 pixel_pin_right = board.D18
+pixel_pin_left = board.D13
 
 col = {
         "RED"  :(100, 0 ,  0,   0),
         "GREEN":(0,   100, 0,   0),
         "BLUE" :(0,   0,   100, 0),
-        "WHITE":(0,   0,   0,   100)
+        "WHITE":(0,   0,   0,   100),
+        "BLACK":(0,   0,   0,   0),
+        "YELLOW":(100, 100, 0, 0),
+        "CYAN"  :(0,   100, 100, 0),
+        "MAGENTA":(100, 0,   100, 0),
+        "ORANGE":(100, 50, 0,   0),
+        "PURPLE":(100, 0,   100, 0),
+        "PINK"  :(100, 0,   50,  0),
+        "GREY"  :(50,  50,  50,  0),
+        "BROWN" :(100, 50, 0,   0),
+        "LIGHT_BLUE":(0, 100, 100, 0),
+        "LIGHT_GREEN":(0, 100, 0, 0),
+        "LIGHT_RED":(100, 0, 0, 0),
+        "LIGHT_YELLOW":(100, 100, 0, 0),
+        "LIGHT_CYAN":(0, 100, 100, 0),
+        "LIGHT_MAGENTA":(100, 0, 100, 0),
+        "LIGHT_ORANGE":(100, 50, 0, 0),
+        "LIGHT_PURPLE":(100, 0, 100, 0),
+        "LIGHT_PINK":(100, 0, 50, 0),
+        "LIGHT_GREY":(50, 50, 50, 0),
+        "LIGHT_BROWN":(100, 50, 0, 0),
+        "LIGHT_LIGHT_BLUE":(0, 100, 100, 0),
+        "LIGHT_LIGHT_GREEN":(0, 100, 0, 0),
+        "LIGHT_LIGHT_RED":(100, 0, 0, 0),
+        "LIGHT_LIGHT_YELLOW":(100, 100, 0, 0),
+        "LIGHT_LIGHT_CYAN":(0, 100, 100, 0),        
       }
 
 # The number of NeoPixels
@@ -31,8 +57,13 @@ num_pixels = 600
 # For RGBW NeoPixels, simply change the ORDER to RGBW or GRBW.
 ORDER = neopixel.GRBW
 
-pixels = neopixel.NeoPixel(
+# Create two instances of Neopixel strips
+pixels_r = neopixel.NeoPixel(
     pixel_pin_right, num_pixels, brightness=0.5, auto_write=False, pixel_order=ORDER, 
+)
+
+pixels_l = neopixel.NeoPixel(
+    pixel_pin_left, num_pixels, brightness=0.5, auto_write=False, pixel_order=ORDER, 
 )
 
 
@@ -88,8 +119,14 @@ def move_band( lpixels,
                speed = 4
               ):
     """
-    Move a band through the LED strip
-    This is very slow!!
+    A band of colour moves through the strip.   
+    
+    lpixels:            NeoPixel object
+    bandsize:           size of the band
+    dir:                direction of the band
+    foreground_colour:  colour of the band
+    background_colour:  colour of the background
+    speed:              speed of the band
     """
     
     lpixels.fill(background_colour)
@@ -107,26 +144,31 @@ def move_band( lpixels,
     # Move the band
     for position in range(num_pixels - bandsize -1):
         if dir > 0:
-            pixels[position] = background_colour
-            pixels[bandsize + position] = foreground_colour
+            lpixels[position] = background_colour
+            lpixels[bandsize + position] = foreground_colour
         if dir < 0:
-            pixels[num_pixels - 1 - position] = background_colour
-            pixels[num_pixels - bandsize - position -1 ] = foreground_colour
+            lpixels[num_pixels - 1 - position] = background_colour
+            lpixels[num_pixels - bandsize - position -1 ] = foreground_colour
         
         if position % speed == 0:
-            pixels.show()
+            lpixels.show()
 
-def rainbow_cycle(wait):
+def rainbow_cyclel(lpixels, wait):
     """
+    Draw rainbow that uniformly distributes itself across all pixels.
+    lpixels: NeoPixel object
+    wait:    time to wait between each step
     """
     for j in range(255):
-        for i in range(num_pixels):
-            pixel_index = (i * 256 // num_pixels) + j
-            pixels[i] = wheel(pixel_index & 255)
-        pixels.show()
+        for i in range(len(lpixels)):
+            pixel_index = (i * 256 // len(lpixels)) + j
+            lpixels[i] = wheel(pixel_index & 255)
+        lpixels.show()
         time.sleep(wait)
 
-def random_burst(lpixels, idelay, rnge = 100): #   { //-RANDOM INDEX/COLOR
+def random_burst(lpixels, 
+                 idelay, 
+                 rnge = 100): #   
     """
     Randomly light an LED a random colour
     """
@@ -141,7 +183,10 @@ def random_burst(lpixels, idelay, rnge = 100): #   { //-RANDOM INDEX/COLOR
         time.sleep(idelay)
         lpixels[idex] = (0, 0, 0, 0)
     
-def effect_breathing(lpixels, color=(0, 0, 255, 0), speed=0.02, repeat = 1):
+def effect_breathing(lpixels, 
+                     color=(0, 0, 255, 0), 
+                     speed=0.02, 
+                     repeat = 1):
     """
     """
     # create brightness array
@@ -199,6 +244,11 @@ def effect_comet(lpixels,
 
 def HSVtoRGB(hue: int, sat: int, val: int):
     """
+    Convert HSV to RGB
+    hue : 0-360
+    sat : 0-255
+    val : 0-255     
+   
     """
     colors = [0] *3
 
@@ -250,58 +300,60 @@ def HSVtoRGB(hue: int, sat: int, val: int):
     return colors
 
 
-
 def main():
     try:
         while True:
             log.info("Red")
-            pixels.fill( col["RED"] )
-            pixels.show()
+            pixels_l.fill( col["RED"] )
+            pixels_r.fill( col["RED"] )
+            pixels_l.show()
+            pixels_r.show()
             time.sleep(0.5)
 
             log.info("Green")
-            pixels.fill((0, 100, 0, 0))
-            pixels.show()
+            pixels_l.fill((0, 100, 0, 0))
+            pixels_l.show()
             time.sleep(0.5)
 
             log.info("Blue")
-            pixels.fill((0, 0, 100, 0))
-            pixels.show()
+            pixels_l.fill((0, 0, 100, 0))
+            pixels_l.show()
             time.sleep(0.5)
 
             log.info("White")
-            pixels.fill((0, 0, 0, 100))
-            pixels.show()
+            pixels_l.fill((0, 0, 0, 100))
+            pixels_l.show()
             time.sleep(0.5)
 
-            pixels.fill((0,0,0,0))
-            pixels.show()
+            pixels_l.fill((0,0,0,0))
+            pixels_l.show()
             time.sleep(0.5)
 
-            effect_comet(pixels, color=(255, 0, 0, 0), tail_length=40, speed=4)
-            effect_comet(pixels, color=(0, 255, 0, 0), tail_length=40, speed=4, 
+            effect_comet(pixels_l, color=(255, 0, 0, 0), tail_length=40, speed=4)
+            effect_comet(pixels_l, color=(0, 255, 0, 0), tail_length=40, speed=4, 
                          reverse=True)
 
-            effect_chasing_dots(pixels)
+            effect_chasing_dots(pixels_l)
 
-            effect_breathing(pixels, color=(255,0,0,0))
-            #effect_breathing(pixels, color=(0,255,0,0))
-            #effect_breathing(pixels, color=(0,0,255,0))
-            #effect_breathing(pixels, color=(0,0,0,255))
+            effect_breathing(pixels_l, color=(255,0,0,0))
+            #effect_breathing(pixels_l, color=(0,255,0,0))
+            #effect_breathing(pixels_l, color=(0,0,255,0))
+            #effect_breathing(pixels_l, color=(0,0,0,255))
 
-            move_band(pixels, bandsize=30, dir=1, speed=5) 
-            move_band(pixels, bandsize=30, dir =-1, speed=5)
+            move_band(pixels_l, bandsize=30, dir=1, speed=5) 
+            move_band(pixels_l, bandsize=30, dir =-1, speed=5)
   
-            pixels.fill((0,0,0,0))
-            pixels.show()
+            pixels_l.fill((0,0,0,0))
+            pixels_l.show()
 
-            random_burst(pixels, 0.1)
+            random_burst(pixels_l, 0.1)
             rainbow_cycle(0.001)        # rainbow cycle with 1ms delay per step
 
     except KeyboardInterrupt:
-        pixels.fill((0,0,0,0))
-        pixels.show()
+        pixels_l.fill((0,0,0,0))
+        pixels_l.show()
 
 
 if __name__ == "__main__":
     main()
+
